@@ -1,0 +1,15 @@
+#!/usr/bin/env ansible-playbook -f 50
+---
+# This playbook requires the following variables:
+#   hosts - this is the host(s) that you are trying to run on. any host in the hosts file is valid
+#   value - value to set user_storage_quota to.  Default 21474836480 (20 GB)
+#
+# Author: Mike Dorman <mdorman@godaddy.com>
+#
+# Usage: 
+#   ansible-playbook enable-glance-quota.yaml -k -K --extra-vars "hosts=glance-servers value=21474836480"
+
+- hosts: '{{ hosts }}'
+  sudo: yes
+  tasks:
+  - include: ../tasks/turn-on-glance-quota.yaml
