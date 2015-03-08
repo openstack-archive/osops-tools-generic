@@ -18,9 +18,19 @@
 # Output format:
 # uuid stat_category k:v k:v k:v
 #
-# This script tries to be as quiet as possible. If a stat is unable
-# to be retrieved, the script either moves on to the next instance or
-# just prints empty values.
+# Notes:
+#   * This script tries to be as quiet as possible. If a stat is unable
+#     to be retrieved, the script either moves on to the next instance 
+#     or prints empty values.
+#
+#   * `nova diagnostics uuid` gives similar results, though could take
+#     longer to run cloud-wide. The reported memory for `diagnostics`
+#     looks more accurate -- I need to look into this.
+#
+#   * cpu "usage" is only useful for short, bursty use-cases. Do not use
+#     it if the instance runs longer than an initial burst. To calculate
+#     cpu usage more accurately, focus on cpu time, real time, and number
+#     of cores.
 #
 # Any questions or comments, contact jtopjian
 
