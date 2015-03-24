@@ -9,3 +9,4 @@ Other sources of tools
 
 * GoDaddy: https://github.com/godaddy/openstack-puppet/tree/master/tools
 * NeCTAR: https://github.com/NeCTAR-RC/nectar-tools
+* CERN: https://github.com/cernops
