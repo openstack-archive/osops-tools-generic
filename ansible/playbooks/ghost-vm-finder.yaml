@@ -1,0 +1,29 @@
+#!/usr/local/bin/ansible-playbook
+# This playbook looks for "ghost" VMs which are qemu processes
+# that are running but that have been deleted from nova.
+# These can occur as a result of a failed migration or a bug
+# in nova or in your nova backend. "ghost" VMs use system resources
+# on your compute hosts and it's possible that your customers are
+# still using them via a floating-ip but have lost ability
+# to manage them.
+#
+# This script assumes that you have an openrc file in /root/openrc
+# on the ansible host where you are running this from.
+#
+# Author: Matt Fischer <matt.fischer@twcable.com>
+#
+# Usage:
+#   ghost-vm-finder.yaml
+---
+- name: "Find Ghost VMs (exist as a qemu process, but not in nova)"
+  hosts: compute
+  serial: 10
+  gather_facts: no
+  tasks:
+  - shell: "ps -ef | grep qemu | grep -v 'grep' | awk -F 'uuid' '{print $2}' | awk '{print $1}'"
+    name: "gather IDs from qemu"
+    register: qemu_list
+  - local_action: shell . /root/openrc && /usr/bin/nova show --minimal {{ item }}
+    name: "check IDs with nova"
+    with_items:
+      - "{{ qemu_list.stdout_lines }}"
