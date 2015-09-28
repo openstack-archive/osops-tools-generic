@@ -29,7 +29,7 @@ DATABASE=nova
 TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instance_system_metadata instances reservations compute_node_stats "
 
 ## process the command line arguments
-while getopts "hn" opt; do
+while getopts "hnd:H:u:p:" opt; do
   case $opt in
     h)
       echo "openstack_db_archive.sh - archive records flagged as deleted into the shadow tables."
@@ -42,10 +42,30 @@ while getopts "hn" opt; do
       echo
       echo "Options:"
       echo " -n dry run mode - pass --dry-run to pt-archiver"
+      echo " -d db name"
+      echo " -H db hostname"
+      echo " -u db username"
+      echo " -p db password"
+      echo " -h (show help)"
       exit 0
       ;;
     n)
       DRY_RUN="--dry-run"
+      ;;
+    d)
+      DATABASE=${OPTARG}
+      ;;
+    H)
+      HOSTPT=",h=${OPTARG}"
+      HOST="-h ${OPTARG}"
+      ;;
+    u)
+      USERPT=",u=${OPTARG}"
+      USER="-u ${OPTARG}"
+      ;;
+    p)
+      PASSPT=",p=${OPTARG}"
+      PASS="-p${OPTARG}"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -71,40 +91,39 @@ echo `date` "Purging nova.instance_system_metadata of deleted instance data"
 TABLE=instance_system_metadata
 SHADOW_TABLE="shadow_${TABLE}"
 pt-archiver ${DRY_RUN} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
-  --source h=localhost,D=nova,t=${TABLE} --no-check-charset  \
-  --dest h=localhost,D=${DATABASE},t=${SHADOW_TABLE} \
+  --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
+  --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
   --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid=instance_system_metadata.instance_uuid)'
 
 
 for TABLE in ${TABLES}
 do
-        SHADOW_TABLE="shadow_${TABLE}"
+  SHADOW_TABLE="shadow_${TABLE}"
 
-        ACTIVE_RECORDS=`mysql -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
-        DELETED_RECORDS=`mysql -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
+  ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
+  DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
 
-        LOCAL_ABORTS=`mysql -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
+  LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
 
 	echo
 	echo
-        echo `date` "Archiving ${DELETED_RECORDS} records to ${SHADOW_TABLE} from ${TABLE}, leaving ${ACTIVE_RECORDS}"
-        echo `date` "LOCAL_ABORTS before"
+  echo `date` "Archiving ${DELETED_RECORDS} records to ${SHADOW_TABLE} from ${TABLE}, leaving ${ACTIVE_RECORDS}"
+  echo `date` "LOCAL_ABORTS before"
 	echo ${LOCAL_ABORTS}
 
+  pt-archiver ${DRY_RUN} --statistics --progress 100 --commit-each --limit 10 \
+    --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
+    --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
+    --ignore --no-check-charset --sleep-coef 0.75 \
+    --where "deleted!=0"
 
-        pt-archiver ${DRY_RUN} --statistics --progress 100 --commit-each --limit 10 \
-          --source h=localhost,D=${DATABASE},t=${TABLE} \
-          --dest h=localhost,D=${DATABASE},t=${SHADOW_TABLE} \
-            --ignore --no-check-charset --sleep-coef 0.75 \
-            --where "deleted!=0"
-
-        echo `date` "Finished archiving ${DELETED_RECORDS} to ${SHADOW_TABLE} from ${TABLE}"
-        echo `date` "LOCAL_ABORTS before"
+  echo `date` "Finished archiving ${DELETED_RECORDS} to ${SHADOW_TABLE} from ${TABLE}"
+  echo `date` "LOCAL_ABORTS before"
 	echo ${LOCAL_ABORTS}
-        LOCAL_ABORTS=`mysql -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
-        echo `date` "LOCAL_ABORTS after"
+  LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
+  echo `date` "LOCAL_ABORTS after"
 	echo ${LOCAL_ABORTS}
-        echo
+  echo
 done
 
 echo
