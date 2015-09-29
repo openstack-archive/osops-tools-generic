@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+2: JJ Asghar <jj@getchef.com>
+Workflow+1: JJ Asghar <jj@getchef.com>
+Code-Review+1: David Wahlstrom <david.wahlstrom@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Tue, 29 Sep 2015 15:54:18 +0000
+Reviewed-on: https://review.openstack.org/228709
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
