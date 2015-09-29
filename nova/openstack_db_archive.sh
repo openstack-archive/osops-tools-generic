@@ -31,7 +31,7 @@ FKTABLES="block_device_mapping instance_metadata instance_system_metadata instan
 TABLES="${TABLES} ${FKTABLES}"
 
 ## process the command line arguments
-while getopts "hnd:H:u:p:" opt; do
+while getopts "hnad:H:u:p:" opt; do
   case $opt in
     h)
       echo "openstack_db_archive.sh - archive records flagged as deleted into the shadow tables."
@@ -44,6 +44,7 @@ while getopts "hnd:H:u:p:" opt; do
       echo
       echo "Options:"
       echo " -n dry run mode - pass --dry-run to pt-archiver"
+      echo " -a no safe auto increment - pass --nosafe-auto-increment to pt-archiver"
       echo " -d db name"
       echo " -H db hostname"
       echo " -u db username"
@@ -53,6 +54,9 @@ while getopts "hnd:H:u:p:" opt; do
       ;;
     n)
       DRY_RUN="--dry-run"
+      ;;
+    a)
+      NOSAI="--nosafe-auto-increment"
       ;;
     d)
       DATABASE=${OPTARG}
@@ -105,7 +109,7 @@ for TABLE in ${FKTABLES}; do
   # --where 'NOT EXISTS(SELECT * FROM instances WHERE deleted=0 AND uuid='${TABLE}'.instance_uuid)'
 
   SHADOW_TABLE="shadow_${TABLE}"
-  pt-archiver ${DRY_RUN} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
+  pt-archiver ${DRY_RUN} ${NOSAI} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
     --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
     --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
     --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid='${TABLE}'.instance_uuid)'
@@ -127,7 +131,7 @@ do
   echo `date` "LOCAL_ABORTS before"
 	echo ${LOCAL_ABORTS}
 
-  pt-archiver ${DRY_RUN} --statistics --progress 100 --commit-each --limit 10 \
+  pt-archiver ${DRY_RUN} ${NOSAI} --statistics --progress 100 --commit-each --limit 10 \
     --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
     --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
     --ignore --no-check-charset --sleep-coef 0.75 \
