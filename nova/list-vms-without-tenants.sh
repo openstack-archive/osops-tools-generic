@@ -4,7 +4,6 @@
 # was removed, but VMs were still in the tenant.)
 #
 # Author: Kris Lindgren <klindgren@godaddy.com>
-#
 
 echo "THIS SCRIPT NEED TO HAVE keystonerc sourced to work"
 sleep 5
@@ -19,14 +18,12 @@ novatenants=$( echo "$novavmsraw" | awk '{print $6}' | sort | uniq | grep -v Ten
 echo "Starting to list vm's that are no longer attached to a tenant..."
 echo "Fields are:"
 echo "|  VM ID                               |     VM Name                               | Tenant Id                        | User Id        |"
-for i in $novatenants
-do
-	tmp=$( echo "$keystoneraw" | grep $i )
-	if [ $? -eq 0 ]
-	then
-		continue
-	else
-		vms=$( echo "$novavmsraw" | grep $i )
-		echo "$vms"
-	fi
+for i in $novatenants; do
+    tmp=$( echo "$keystoneraw" | grep $i )
+    if [ $? -eq 0 ]; then
+        continue
+    else
+        vms=$( echo "$novavmsraw" | grep $i )
+        echo "$vms"
+    fi
 done
