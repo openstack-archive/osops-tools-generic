@@ -21,14 +21,15 @@
 
 
 DATABASE=nova
-TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instance_system_metadata instances reservations compute_node_stats "
+FKTABLES="block_device_mapping instance_metadata instance_system_metadata instance_actions instance_faults virtual_interfaces fixed_ips security_group_instance_association migrations instance_extra"
+TABLES="${TABLES} ${FKTABLES}"
 
 function usage() {
   echo "$0: Report on the current state of unarchived records in the main nova.* tables"
   echo "Usage: $0 -d [database] -H [hostname] -u [username] -p [password]"
 }
 
-while getopts "d:H:u:p:" opt; do
+while getopts "d:h:u:p:" opt; do
   case $opt in
     d)
       DATABASE=${OPTARG}
