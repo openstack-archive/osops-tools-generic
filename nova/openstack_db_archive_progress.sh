@@ -23,13 +23,39 @@
 DATABASE=nova
 TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instance_system_metadata instances reservations compute_node_stats "
 
+function usage() {
+  echo "$0: Report on the current state of unarchived records in the main nova.* tables"
+  echo "Usage: $0 -d [database] -H [hostname] -u [username] -p [password]"
+}
+
+while getopts "d:H:u:p:" opt; do
+  case $opt in
+    d)
+      DATABASE=${OPTARG}
+      ;;
+    H)
+      HOST="-h ${OPTARG}"
+      ;;
+    u)
+      USER="-u ${OPTARG}"
+      ;;
+    p)
+      PASS="-p${OPTARG}"
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
 for TABLE in ${TABLES}
 do
     SHADOW_TABLE="shadow_${TABLE}"
 
-    ACTIVE_RECORDS=`mysql -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
-    DELETED_RECORDS=`mysql -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
-    SHADOW_RECORDS=`mysql -B -e "select count(id) from ${DATABASE}.${SHADOW_TABLE}" | tail -1`
+    ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
+    DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
+    SHADOW_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${SHADOW_TABLE}" | tail -1`
     TOTAL_RECORDS=`expr $ACTIVE_RECORDS + $DELETED_RECORDS + $SHADOW_RECORDS`
 
     echo `date` "${DATABASE}.${TABLE} has ${ACTIVE_RECORDS}, ${DELETED_RECORDS} ready for archiving and ${SHADOW_RECORDS} already in ${SHADOW_TABLE}. Total records is ${TOTAL_RECORDS}"
