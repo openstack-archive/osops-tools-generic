@@ -30,52 +30,51 @@ TABLES="security_group_rules security_group_instance_association security_groups
 
 ## process the command line arguments
 while getopts "hnd:H:u:p:" opt; do
-  case $opt in
-    h)
-      echo "openstack_db_archive.sh - archive records flagged as deleted into the shadow tables."
-      echo "Records are archived from the following tables:"
-      echo
-      for TABLE in ${TABLES}
-      do
-        echo "    ${DATABASE}.${TABLE}"
-      done
-      echo
-      echo "Options:"
-      echo " -n dry run mode - pass --dry-run to pt-archiver"
-      echo " -d db name"
-      echo " -H db hostname"
-      echo " -u db username"
-      echo " -p db password"
-      echo " -h (show help)"
-      exit 0
-      ;;
-    n)
-      DRY_RUN="--dry-run"
-      ;;
-    d)
-      DATABASE=${OPTARG}
-      ;;
-    H)
-      HOSTPT=",h=${OPTARG}"
-      HOST="-h ${OPTARG}"
-      ;;
-    u)
-      USERPT=",u=${OPTARG}"
-      USER="-u ${OPTARG}"
-      ;;
-    p)
-      PASSPT=",p=${OPTARG}"
-      PASS="-p${OPTARG}"
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
-    :)
-      echo "Option -$OPTARG requires an argument." >&2
-      exit 1
-      ;;
-  esac
+    case $opt in
+        h)
+            echo "openstack_db_archive.sh - archive records flagged as deleted into the shadow tables."
+            echo "Records are archived from the following tables:"
+            echo
+            for TABLE in ${TABLES}; do
+                echo "    ${DATABASE}.${TABLE}"
+            done
+            echo
+            echo "Options:"
+            echo " -n dry run mode - pass --dry-run to pt-archiver"
+            echo " -d db name"
+            echo " -H db hostname"
+            echo " -u db username"
+            echo " -p db password"
+            echo " -h (show help)"
+            exit 0
+        ;;
+        n)
+            DRY_RUN="--dry-run"
+        ;;
+        d)
+            DATABASE=${OPTARG}
+        ;;
+        H)
+            HOSTPT=",h=${OPTARG}"
+            HOST="-h ${OPTARG}"
+        ;;
+        u)
+            USERPT=",u=${OPTARG}"
+            USER="-u ${OPTARG}"
+        ;;
+        p)
+            PASSPT=",p=${OPTARG}"
+            PASS="-p${OPTARG}"
+        ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+        ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+        ;;
+    esac
 done
 
 echo
@@ -91,39 +90,38 @@ echo `date` "Purging nova.instance_system_metadata of deleted instance data"
 TABLE=instance_system_metadata
 SHADOW_TABLE="shadow_${TABLE}"
 pt-archiver ${DRY_RUN} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
-  --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
-  --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
-  --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid=instance_system_metadata.instance_uuid)'
-
-
-for TABLE in ${TABLES}
-do
-  SHADOW_TABLE="shadow_${TABLE}"
-
-  ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
-  DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
-
-  LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
-
-	echo
-	echo
-  echo `date` "Archiving ${DELETED_RECORDS} records to ${SHADOW_TABLE} from ${TABLE}, leaving ${ACTIVE_RECORDS}"
-  echo `date` "LOCAL_ABORTS before"
-	echo ${LOCAL_ABORTS}
-
-  pt-archiver ${DRY_RUN} --statistics --progress 100 --commit-each --limit 10 \
-    --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
+    --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
     --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
-    --ignore --no-check-charset --sleep-coef 0.75 \
-    --where "deleted!=0"
+    --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid=instance_system_metadata.instance_uuid)'
 
-  echo `date` "Finished archiving ${DELETED_RECORDS} to ${SHADOW_TABLE} from ${TABLE}"
-  echo `date` "LOCAL_ABORTS before"
-	echo ${LOCAL_ABORTS}
-  LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
-  echo `date` "LOCAL_ABORTS after"
-	echo ${LOCAL_ABORTS}
-  echo
+
+for TABLE in ${TABLES}; do
+    SHADOW_TABLE="shadow_${TABLE}"
+
+    ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
+    DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
+
+    LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
+
+    echo
+    echo
+    echo `date` "Archiving ${DELETED_RECORDS} records to ${SHADOW_TABLE} from ${TABLE}, leaving ${ACTIVE_RECORDS}"
+    echo `date` "LOCAL_ABORTS before"
+    echo ${LOCAL_ABORTS}
+
+    pt-archiver ${DRY_RUN} --statistics --progress 100 --commit-each --limit 10 \
+        --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
+        --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
+        --ignore --no-check-charset --sleep-coef 0.75 \
+        --where "deleted!=0"
+
+    echo `date` "Finished archiving ${DELETED_RECORDS} to ${SHADOW_TABLE} from ${TABLE}"
+    echo `date` "LOCAL_ABORTS before"
+    echo ${LOCAL_ABORTS}
+    LOCAL_ABORTS=`mysql ${HOST} ${USER} ${PASS} -B -e "SHOW STATUS LIKE 'wsrep_%'" | grep -e wsrep_local_bf_aborts -e wsrep_local_cert_failures`
+    echo `date` "LOCAL_ABORTS after"
+    echo ${LOCAL_ABORTS}
+    echo
 done
 
 echo

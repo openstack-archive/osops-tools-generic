@@ -17,40 +17,37 @@
 # under the License.
 
 # Report on the current state of unarchived records in the main nova.* tables
-#
-
 
 DATABASE=nova
 TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instance_system_metadata instances reservations compute_node_stats "
 
-function usage() {
-  echo "$0: Report on the current state of unarchived records in the main nova.* tables"
-  echo "Usage: $0 -d [database] -H [hostname] -u [username] -p [password]"
+function usage {
+    echo "$0: Report on the current state of unarchived records in the main nova.* tables"
+    echo "Usage: $0 -d [database] -H [hostname] -u [username] -p [password]"
 }
 
 while getopts "d:H:u:p:" opt; do
-  case $opt in
-    d)
-      DATABASE=${OPTARG}
-      ;;
-    H)
-      HOST="-h ${OPTARG}"
-      ;;
-    u)
-      USER="-u ${OPTARG}"
-      ;;
-    p)
-      PASS="-p${OPTARG}"
-      ;;
-    *)
-      usage
-      exit 1
-      ;;
-  esac
+    case $opt in
+        d)
+            DATABASE=${OPTARG}
+        ;;
+        H)
+            HOST="-h ${OPTARG}"
+        ;;
+        u)
+            USER="-u ${OPTARG}"
+        ;;
+        p)
+            PASS="-p${OPTARG}"
+        ;;
+        *)
+            usage
+            exit 1
+        ;;
+    esac
 done
 
-for TABLE in ${TABLES}
-do
+for TABLE in ${TABLES}; do
     SHADOW_TABLE="shadow_${TABLE}"
 
     ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
