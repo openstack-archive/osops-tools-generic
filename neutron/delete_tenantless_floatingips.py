@@ -2,14 +2,14 @@
 
 """
 This script deletes all the floatingips a user has that are not
-associated with a port_id.
+associated with a tenant.
 """
 
 import os
 import sys
 
 from neutronclient.v2_0 import client
-
+import keystoneclient.v2_0.client as ksclient
 
 def main():
 
@@ -28,10 +28,18 @@ def main():
                             tenant_name=tenant_name,
                             password=password,
                             auth_url=auth_url)
+    
+    keystone = ksclient.Client(username=username,
+                            tenant_name=tenant_name,
+                            password=password,
+                            auth_url=auth_url)
 
     floatingips = neutron.list_floatingips()
     for floatingip in floatingips['floatingips']:
-        if not floatingip['port_id']:
+        try:
+            keystone.tenants.get(floatingip['tenant_id'])
+        # If the tenant ID doesn't exist, then this object is orphaned
+        except ksclient.exceptions.NotFound:
             print(("Deleting floatingip %s - %s") %
                   (floatingip['id'], floatingip['floating_ip_address']))
             if not dry_run:
