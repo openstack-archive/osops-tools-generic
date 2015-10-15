@@ -26,7 +26,9 @@ unset DRY_RUN
 
 # tables to arhive deleted records from
 DATABASE=nova
-TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instance_system_metadata instances reservations compute_node_stats "
+TABLES="security_group_rules security_group_instance_association security_groups instance_info_caches instances reservations compute_node_stats"
+FKTABLES="block_device_mapping instance_metadata instance_system_metadata instance_actions instance_faults virtual_interfaces fixed_ips security_group_instance_association migrations instance_extra"
+TABLES="${TABLES} ${FKTABLES}"
 
 ## process the command line arguments
 while getopts "hnd:H:u:p:" opt; do
@@ -82,18 +84,32 @@ echo
 echo `date` "OpenStack Database Archiver starting.."
 echo
 
-echo `date` "Purging nova.instance_system_metadata of deleted instance data"
-# this is back to front (on delete if you can find a record in instances flagged for deletion)
-# --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid=instance_system_metadata.instance_uuid)'
-# to delete where there is no active record:
-# --where 'NOT EXISTS(SELECT * FROM instances WHERE deleted=0 AND uuid=instance_system_metadata.instance_uuid)'
 
-TABLE=instance_system_metadata
+echo `date` "Purging nova.instance_actions_events of deleted instance data"
+# this is back to front (on delete if you can find a record in instances flagged for deletion)
+# --where 'EXISTS(SELECT * FROM instance_actions, instances WHERE instance_actions.id=instance_actions_events.action_id AND instance_actions.instance_uuid=instances.uuid AND instances.deleted!=0)'
+
+TABLE=instance_actions_events
 SHADOW_TABLE="shadow_${TABLE}"
-pt-archiver ${DRY_RUN} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
+pt-archiver ${DRY_RUN} ${NOSAI} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
   --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
   --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
-  --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid=instance_system_metadata.instance_uuid)'
+  --where 'EXISTS(SELECT * FROM instance_actions, instances WHERE instance_actions.id=instance_actions_events.action_id AND instance_actions.instance_uuid=instances.uuid AND instances.deleted!=0)'
+
+
+for TABLE in ${FKTABLES}; do
+  echo `date` "Purging nova.${TABLE} of deleted instance data"
+  # this is back to front (on delete if you can find a record in instances flagged for deletion)
+  # --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid='${TABLE}'.instance_uuid)'
+  # to delete where there is no active record:
+  # --where 'NOT EXISTS(SELECT * FROM instances WHERE deleted=0 AND uuid='${TABLE}'.instance_uuid)'
+
+  SHADOW_TABLE="shadow_${TABLE}"
+  pt-archiver ${DRY_RUN} --statistics --sleep-coef 0.75 --progress 100 --commit-each --limit 10 \
+    --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} --no-check-charset  \
+    --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
+    --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND uuid='${TABLE}'.instance_uuid)'
+done
 
 
 for TABLE in ${TABLES}
