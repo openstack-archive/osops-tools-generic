@@ -1,0 +1,13 @@
+Verified+2: Jenkins
+Code-Review+1: Tom Fifield <tom@openstack.org>
+Code-Review+1: Sam Morrison <sorrison@gmail.com>
+Code-Review+1: Simon McCartney <simon@mccartney.ie>
+Code-Review+2: Joe Topjian <joe@topjian.net>
+Workflow+1: Joe Topjian <joe@topjian.net>
+Code-Review-1: Matt Fischer <matt@mattfischer.com>
+Code-Review+2: JJ Asghar <jj@getchef.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 15 Oct 2015 16:46:13 +0000
+Reviewed-on: https://review.openstack.org/229013
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
