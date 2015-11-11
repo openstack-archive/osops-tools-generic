@@ -21,30 +21,32 @@ credentials = get_credentials()
 neutron = nclient.Client(**credentials)
 keystone = ksclient.Client(**credentials)
 
+def get_tenantids():
+    tenantids = []
+    for tenant in keystone.tenants.list():
+        tenantids.append(tenant.id)
+    return tenantids
+
 def get_orphaned_neutron_objects(object):
     objects = getattr(neutron, 'list_' + object)()
     orphans = []
     for object in objects.get(object):
-        try:
-            keystone.tenants.get(object['tenant_id'])
-        # If the tenant ID doesn't exist, then this object is orphaned
-        except ksclient.exceptions.NotFound:
+        if object['tenant_id'] not in tenantids:
             orphans.append(object['id'])
     return orphans
 
-def main():
+if __name__ == '__main__':
     if len(sys.argv) > 1:
+        tenantids = get_tenantids()
         if sys.argv[1] == 'all':
             objects = [ 'networks', 'routers', 'subnets', 'floatingips' ]
         else:
             objects = sys.argv[1:]
         for object in objects:
             orphans = get_orphaned_neutron_objects(object)
-            print len(orphans), 'orphan(s) found of type', object, '[%s]' % ', '.join(map(str, orphans))
+            print len(orphans), 'orphan(s) found of type', object
+            print '\n'.join(map(str, orphans))
 
     else:
         usage()
         sys.exit(1)
-
-if __name__ == '__main__':
-    main()
