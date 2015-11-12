@@ -1,0 +1,11 @@
+Verified+2: Jenkins
+Code-Review+1: Ed Leafe <ed@leafe.com>
+Code-Review+2: Simon Pasquier <spasquier@mirantis.com>
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Code-Review+1: Balaji Narayanan <lists@balajin.net>
+Submitted-by: Jenkins
+Submitted-at: Thu, 12 Nov 2015 15:56:44 +0000
+Reviewed-on: https://review.openstack.org/244160
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
