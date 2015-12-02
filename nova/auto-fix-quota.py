@@ -7,9 +7,11 @@
 from nova import db
 from nova import config
 from nova import context
+from nova import exception
 from collections import OrderedDict
 import argparse
 import prettytable
+import bpdb
 
 
 def make_table(name, *args):
@@ -20,24 +22,25 @@ def make_table(name, *args):
 
 
 def get_actual_usage(cntxt, tenant):
-    instance_info = db.instance_data_get_for_project(cxt, tenant)
+    filter_object = {'deleted': '',
+                     'project_id': tenant}
+    instances = db.instance_get_all_by_filters(cxt, filter_object)
 
     # calculate actual usage
-    actual_instance_count = instance_info[0]
-    actual_core_count = instance_info[1]
-    actual_ram_count = instance_info[2]
+    actual_instance_count = len(instances)
+    actual_core_count = 0
+    actual_ram_count = 0
 
-    # actual_fixed_ips should be the same as actual_instance_count since there is no
-    # reason in our environment for someone to use two fixed IPs per instance
-    # db.fixed_ip_count_by_project(cxt,tenant)
-    actual_fixed_ips = actual_instance_count
-    actual_secgroup_count = db.security_group_count_by_project(cxt, tenant)
+    for instance in instances:
+        actual_core_count += instance['vcpus']
+        actual_ram_count  += instance['memory_mb']
+
+    actual_secgroup_count = len(db.security_group_get_by_project(cxt,tenant))
 
     return OrderedDict((
         ("actual_instance_count", actual_instance_count),
         ("actual_core_count", actual_core_count),
         ("actual_ram_count", actual_ram_count),
-        ("actual_fixed_ips", actual_fixed_ips),
         ("actual_secgroup_count", actual_secgroup_count)
     ))
 
@@ -49,109 +52,101 @@ def get_incorrect_usage(cntxt, tenant):
     #  u'instances': {'reserved': 0L, 'in_use': 0L},
     #  u'cores': {'reserved': 0L, 'in_use': 0L},
     #  'project_id': tenant,
-    #  u'fixed_ips': {'reserved': 0L, 'in_use': 0L},
     #  u'security_groups': {'reserved': 0L, 'in_use': 1L}}
     #
     # Get (instance_count, total_cores, total_ram) for project.
     # If instances does not exist,  then this
-    if 'instances' in existing_usage:
-        # it's possible for accounts to use nothing but the system default
-        # group, which doesn't get tracked, so default to 1
-        try:
-            security_groups = existing_usage["security_groups"]["in_use"]
-        except KeyError:
-            security_groups = 1
 
-        return OrderedDict((
-            ("db_instance_count", existing_usage["instances"]["in_use"]),
-            ("db_core_count", existing_usage["cores"]["in_use"]),
-            ("db_ram_count", existing_usage["ram"]["in_use"]),
-            ("db_fixed_ips", existing_usage["fixed_ips"]["in_use"]),
-            ("db_secgroup_count", security_groups)
-        ))
-    else:
-        print "%s get_incorrect_usage failed to find quota usage information in " \
-              "database.  Is this tenant in use?" % tenant
-        exit(0)
-
-
-def fix_usage(cntxt, tenant, actual_table_name, incorrect_table_name):
-    print "\nUpdating quota usage to reflect actual usage..\n"
-    # Calculate differences
-    existing_usage = db.quota_usage_get_all_by_project(cntxt, tenant)
-    actual = get_actual_usage(cntxt, tenant)
-
-    # it's possible for accounts to use nothing but the system default
-    # group, which doesn't get tracked, so default to 0
     try:
-        security_groups = existing_usage["security_groups"]["in_use"]
-        secgroup_difference = security_groups - actual["actual_secgroup_count"]
+      security_groups = existing_usage["security_groups"]["in_use"]
     except KeyError:
-        security_groups = None
+      security_groups = 1
 
-    instance_difference = \
-        existing_usage["instances"]["in_use"] - actual["actual_instance_count"]
-    core_difference = \
-        existing_usage["cores"]["in_use"] - actual["actual_core_count"]
-    ram_difference = \
-        existing_usage["ram"]["in_use"] - actual["actual_ram_count"]
-    # Actual_fixed_ips should be the same as actual_instance_count since there is no
-    # Reason in our environment for someone to use two fixed IPs
-    # existing_usage["fixed_ips"]["in_use"]-actual["actual_fixed_ips"]
-    fixedips_difference = \
-        existing_usage["fixed_ips"]["in_use"] - actual["actual_instance_count"]
-    # Quota_usage_update(context, project_id, resource, **kwargs)
-    # Update ram.
-    db.quota_usage_update(cxt,
-                          tenant,
-                          'ram',
-                          in_use=existing_usage["ram"]["in_use"] -
-                          ram_difference)
-    # Update instances
-    db.quota_usage_update(cxt,
-                          tenant,
-                          'instances',
-                          in_use=existing_usage["instances"]["in_use"] -
-                          instance_difference)
-    # Update cores
-    db.quota_usage_update(cxt,
-                          tenant,
-                          'cores',
-                          in_use=existing_usage["cores"]["in_use"] - core_difference)
-    # Update fixed IPs
-    """
-    db.quota_usage_update(cxt,
-                          tenant,
-                          'fixed_ips',
-                          in_use=existing_usage["fixed_ips"]["in_use"] - fixedips_difference)
-    """
+    try:
+      instances = existing_usage["instances"]["in_use"]
+    except KeyError:
+      instances = 0
 
-    # Update security groups
-    if security_groups is not None:
-        db.quota_usage_update(cxt,
-                              tenant,
-                              'security_groups',
-                              in_use=security_groups - secgroup_difference)
+    try:
+      cores = existing_usage["cores"]["in_use"]
+    except KeyError:
+      cores = 0
+
+    try:
+      ram = existing_usage["ram"]["in_use"]
+    except KeyError:
+      ram = 0
+
+    return OrderedDict((
+        ("db_instance_count", instances),
+        ("db_core_count", cores),
+        ("db_ram_count", ram),
+        ("db_secgroup_count", security_groups)
+    ))
+
+
+def fix_usage(cntxt, tenant):
+    print "\nUpdating quota usage to reflect actual usage..\n"
+
+    # Get per-user data for this tenant since usage is now per-user
+    filter_object = { 'project_id': tenant }
+    instance_info = db.instance_get_all_by_filters(cntxt, filter_object)
+
+    usage_by_resource = {}
+    #resource_types = ['instances', 'cores', 'ram', 'security_groups']
+    states_to_ignore = ['error','deleted','building']
+
+    for instance in instance_info:
+        user = instance['user_id']
+        # We need to build a list of users who have launched vm's even if the user
+        # no longer exists. We can't use keystone here.
+        if not usage_by_resource.has_key(user):
+          usage_by_resource[user] = {} # Record that this user has once used resources
+        if not instance['vm_state'] in states_to_ignore:
+          user_resource = usage_by_resource[user]
+          user_resource['instances'] = user_resource.get('instances', 0) + 1
+          user_resource['cores'] = user_resource.get('cores', 0) + instance['vcpus']
+          user_resource['ram'] = user_resource.get('ram', 0) + instance['memory_mb']
+
+    secgroup_list = db.security_group_get_by_project(cntxt,tenant)
+    for group in secgroup_list:
+      user = group.user_id
+      if not usage_by_resource.has_key(user):
+        usage_by_resource[user] = {} # Record that this user has once used resources
+      user_resource = usage_by_resource[user]
+      user_resource['security_groups'] = user_resource.get('security_groups', 0) + 1
+
+    # Correct the quota usage in the database
+    for user in usage_by_resource:
+      for resource in resource_types:
+        usage = usage_by_resource[user].get(resource, 0)
+        try:
+          db.quota_usage_update(cntxt, tenant, user, resource, in_use=usage)
+        except exception.QuotaUsageNotFound as e:
+          print e
+          print 'db.quota_usage_update(cntxt, %s, %s, %s, in_use=%s)' % (tenant, user, resource, usage)
+          pass
+
+    print_usage(cntxt, tenant)
+
+def print_usage(context, tenant):
+    actual_table_name = ["Actual Instances",
+			 "Actual Cores",
+			 "Actual RAM",
+			 "Actual Security_Groups"]
+
+    # these are spaced so that the Quota & DB tables match in size
+    incorrect_table_name = ["  DB Instances  ",
+			    "  DB Cores  ",
+			    "  DB RAM  ",
+			    "  DB Security_Groups  "]
 
     print "############### Actual Usage (including non-active instances) ###############"
     print make_table(actual_table_name, get_actual_usage(cxt, tenant).values())
-    print "############### Corrected Database Usage ###############"
+    print "############### Database Usage ###############"
     print make_table(incorrect_table_name, get_incorrect_usage(cxt, tenant).values())
 
-
-actual_table_name = ["Actual Instances",
-                     "Actual Cores",
-                     "Actual RAM",
-                     "Actual Fixed_ips",
-                     "Actual Security_Groups"]
-
-# these are spaced so that the Quota & DB tables match in size
-incorrect_table_name = ["  DB Instances  ",
-                        "  DB Cores  ",
-                        "  DB RAM  ",
-                        "  DB Fixed_ips  ",
-                        "  DB Security_Groups  "]
-
+resource_types = ['instances', 'cores', 'ram', 'security_groups']
 config.parse_args(['filename', '--config-file', '/etc/nova/nova.conf'])
 
 # Get other arguments
@@ -166,19 +161,22 @@ tenant = args.tenant
 # Get admin context
 cxt = context.get_admin_context()
 
-print "############### Actual Usage (including non-active instances) ###############"
-print make_table(actual_table_name, get_actual_usage(cxt, tenant).values())
-print "############### Database Usage ###############"
-print make_table(incorrect_table_name, get_incorrect_usage(cxt, tenant).values())
+print_usage(cxt, tenant)
 
 # if the actual usage & the quota tracking differ,
 # update quota to match reality
-if get_incorrect_usage(cxt, tenant).values() == get_actual_usage(cxt, tenant).values():
+try:
+  actual = get_actual_usage(cxt, tenant).values()
+  incorrect = get_incorrect_usage(cxt, tenant).values()
+except:
+  exit()
+
+if actual == incorrect:
     print "\n%s quota is OK" % tenant
 elif args.dryrun:
     print "Dry Run Mode Enabled - not correcting the quota database."
 else:
-    fix_usage(cxt, tenant, actual_table_name, incorrect_table_name)
+    fix_usage(cxt, tenant)
 
 # This section can replace the final if/else statement to allow prompting for
 #   each tenant before changes happen
