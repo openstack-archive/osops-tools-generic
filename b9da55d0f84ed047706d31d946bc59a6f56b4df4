@@ -1,0 +1,9 @@
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Code-Review+2: Joe Topjian <joe@topjian.net>
+Workflow+1: Joe Topjian <joe@topjian.net>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 17 Dec 2015 05:14:44 +0000
+Reviewed-on: https://review.openstack.org/229031
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
