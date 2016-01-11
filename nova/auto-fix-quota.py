@@ -11,8 +11,6 @@ from nova import exception
 from collections import OrderedDict
 import argparse
 import prettytable
-import bpdb
-
 
 def make_table(name, *args):
     q = prettytable.PrettyTable(name)
