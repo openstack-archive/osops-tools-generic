@@ -36,6 +36,8 @@ def get_actual_usage(cntxt, tenant):
         actual_ram_count  += instance['memory_mb']
 
     actual_secgroup_count = len(db.security_group_get_by_project(cxt,tenant))
+    if actual_secgroup_count == 0:
+      actual_secgroup_count = 1 # Every tenant uses quota for default security group
 
     return OrderedDict((
         ("actual_instance_count", actual_instance_count),
@@ -86,7 +88,6 @@ def get_incorrect_usage(cntxt, tenant):
 
 
 def fix_usage(cntxt, tenant):
-    print "\nUpdating quota usage to reflect actual usage..\n"
 
     # Get per-user data for this tenant since usage is now per-user
     filter_object = { 'project_id': tenant }
@@ -127,7 +128,6 @@ def fix_usage(cntxt, tenant):
           print 'db.quota_usage_update(cntxt, %s, %s, %s, in_use=%s)' % (tenant, user, resource, usage)
           pass
 
-    print_usage(cntxt, tenant)
 
 def print_usage(context, tenant):
     actual_table_name = ["Actual Instances",
@@ -155,13 +155,13 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--tenant', help='Specify tenant', required=True)
 parser.add_argument('-n', '--dryrun', help='Dry Run - don\'t update the database',
                     action="store_true")
+parser.add_argument('-q', '--quiet', help='Quiet mode. Only show incorrect quotas', 
+                    action="store_true")
 args = parser.parse_args()
 tenant = args.tenant
 
 # Get admin context
 cxt = context.get_admin_context()
-
-print_usage(cxt, tenant)
 
 # if the actual usage & the quota tracking differ,
 # update quota to match reality
@@ -169,14 +169,23 @@ try:
   actual = get_actual_usage(cxt, tenant).values()
   incorrect = get_incorrect_usage(cxt, tenant).values()
 except:
-  exit()
+  exit(2)
 
 if actual == incorrect:
-    print "\n%s quota is OK" % tenant
-elif args.dryrun:
-    print "Dry Run Mode Enabled - not correcting the quota database."
+    if not args.quiet:
+      print_usage(cxt, tenant)
+      print "%s quota is OK" % tenant
+    exit(0)
 else:
-    fix_usage(cxt, tenant)
+    print "%s usage and database differ" % tenant
+    print_usage(cxt, tenant)
+    if args.dryrun:
+      print "Dry Run Mode Enabled - not correcting the quota database."
+      exit(1)
+    else:
+        print "Updating quota usage to reflect actual usage..\n"
+        fix_usage(cxt, tenant)
+        print_usage(cxt, tenant)
 
 # This section can replace the final if/else statement to allow prompting for
 #   each tenant before changes happen
