@@ -1,5 +1,4 @@
 #!/bin/bash
-source /root/scripts/stackrc
 
 echo "$(date): Tenant quota correction - started"
 
@@ -10,4 +9,3 @@ for x in $(keystone --insecure tenant-list | awk -F' |\
 done
 
 echo "$(date): Tenant quota correction - finished"
-
