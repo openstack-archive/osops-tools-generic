@@ -22,7 +22,7 @@ def make_table(name, *args):
 def get_actual_usage(cntxt, tenant):
     filter_object = {'deleted': '',
                      'project_id': tenant}
-    instances = db.instance_get_all_by_filters(cxt, filter_object)
+    instances = db.instance_get_all_by_filters(cntxt, filter_object)
 
     # calculate actual usage
     actual_instance_count = len(instances)
@@ -31,11 +31,11 @@ def get_actual_usage(cntxt, tenant):
 
     for instance in instances:
         actual_core_count += instance['vcpus']
-        actual_ram_count  += instance['memory_mb']
+        actual_ram_count += instance['memory_mb']
 
-    actual_secgroup_count = len(db.security_group_get_by_project(cxt,tenant))
+    actual_secgroup_count = len(db.security_group_get_by_project(cntxt, tenant))
     if actual_secgroup_count == 0:
-      actual_secgroup_count = 1 # Every tenant uses quota for default security group
+        actual_secgroup_count = 1 # Every tenant uses quota for default security group
 
     return OrderedDict((
         ("actual_instance_count", actual_instance_count),
@@ -58,24 +58,24 @@ def get_incorrect_usage(cntxt, tenant):
     # If instances does not exist,  then this
 
     try:
-      security_groups = existing_usage["security_groups"]["in_use"]
+        security_groups = existing_usage["security_groups"]["in_use"]
     except KeyError:
-      security_groups = 1
+        security_groups = 1
 
     try:
-      instances = existing_usage["instances"]["in_use"]
+        instances = existing_usage["instances"]["in_use"]
     except KeyError:
-      instances = 0
+        instances = 0
 
     try:
-      cores = existing_usage["cores"]["in_use"]
+        cores = existing_usage["cores"]["in_use"]
     except KeyError:
-      cores = 0
+        cores = 0
 
     try:
-      ram = existing_usage["ram"]["in_use"]
+        ram = existing_usage["ram"]["in_use"]
     except KeyError:
-      ram = 0
+        ram = 0
 
     return OrderedDict((
         ("db_instance_count", instances),
@@ -88,61 +88,60 @@ def get_incorrect_usage(cntxt, tenant):
 def fix_usage(cntxt, tenant):
 
     # Get per-user data for this tenant since usage is now per-user
-    filter_object = { 'project_id': tenant }
+    filter_object = {'project_id': tenant}
     instance_info = db.instance_get_all_by_filters(cntxt, filter_object)
 
     usage_by_resource = {}
     #resource_types = ['instances', 'cores', 'ram', 'security_groups']
-    states_to_ignore = ['error','deleted','building']
+    states_to_ignore = ['error', 'deleted', 'building']
 
     for instance in instance_info:
         user = instance['user_id']
         # We need to build a list of users who have launched vm's even if the user
         # no longer exists. We can't use keystone here.
         if not usage_by_resource.has_key(user):
-          usage_by_resource[user] = {} # Record that this user has once used resources
+            usage_by_resource[user] = {} # Record that this user has once used resources
         if not instance['vm_state'] in states_to_ignore:
-          user_resource = usage_by_resource[user]
-          user_resource['instances'] = user_resource.get('instances', 0) + 1
-          user_resource['cores'] = user_resource.get('cores', 0) + instance['vcpus']
-          user_resource['ram'] = user_resource.get('ram', 0) + instance['memory_mb']
+            user_resource = usage_by_resource[user]
+            user_resource['instances'] = user_resource.get('instances', 0) + 1
+            user_resource['cores'] = user_resource.get('cores', 0) + instance['vcpus']
+            user_resource['ram'] = user_resource.get('ram', 0) + instance['memory_mb']
 
-    secgroup_list = db.security_group_get_by_project(cntxt,tenant)
+    secgroup_list = db.security_group_get_by_project(cntxt, tenant)
     for group in secgroup_list:
-      user = group.user_id
-      if not usage_by_resource.has_key(user):
-        usage_by_resource[user] = {} # Record that this user has once used resources
-      user_resource = usage_by_resource[user]
-      user_resource['security_groups'] = user_resource.get('security_groups', 0) + 1
+        user = group.user_id
+        if not usage_by_resource.has_key(user):
+            usage_by_resource[user] = {} # Record that this user has once used resources
+        user_resource = usage_by_resource[user]
+        user_resource['security_groups'] = user_resource.get('security_groups', 0) + 1
 
     # Correct the quota usage in the database
     for user in usage_by_resource:
-      for resource in resource_types:
-        usage = usage_by_resource[user].get(resource, 0)
-        try:
-          db.quota_usage_update(cntxt, tenant, user, resource, in_use=usage)
-        except exception.QuotaUsageNotFound as e:
-          print e
-          print 'db.quota_usage_update(cntxt, %s, %s, %s, in_use=%s)' % (tenant, user, resource, usage)
-          pass
+        for resource in resource_types:
+            usage = usage_by_resource[user].get(resource, 0)
+            try:
+                db.quota_usage_update(cntxt, tenant, user, resource, in_use=usage)
+            except exception.QuotaUsageNotFound as e:
+                print e
+                print 'db.quota_usage_update(cntxt, %s, %s, %s, in_use=%s)' % \
+                      (tenant, user, resource, usage)
 
-
-def print_usage(context, tenant):
+def print_usage(cntxt, tenant):
     actual_table_name = ["Actual Instances",
-			 "Actual Cores",
-			 "Actual RAM",
-			 "Actual Security_Groups"]
+                         "Actual Cores",
+                         "Actual RAM",
+                         "Actual Security_Groups"]
 
     # these are spaced so that the Quota & DB tables match in size
     incorrect_table_name = ["  DB Instances  ",
-			    "  DB Cores  ",
-			    "  DB RAM  ",
-			    "  DB Security_Groups  "]
+                            "  DB Cores  ",
+                            "  DB RAM  ",
+                            "  DB Security_Groups  "]
 
     print "############### Actual Usage (including non-active instances) ###############"
-    print make_table(actual_table_name, get_actual_usage(cxt, tenant).values())
+    print make_table(actual_table_name, get_actual_usage(cntxt, tenant).values())
     print "############### Database Usage ###############"
-    print make_table(incorrect_table_name, get_incorrect_usage(cxt, tenant).values())
+    print make_table(incorrect_table_name, get_incorrect_usage(cntxt, tenant).values())
 
 resource_types = ['instances', 'cores', 'ram', 'security_groups']
 config.parse_args(['filename', '--config-file', '/etc/nova/nova.conf'])
@@ -153,7 +152,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--tenant', help='Specify tenant', required=True)
 parser.add_argument('-n', '--dryrun', help='Dry Run - don\'t update the database',
                     action="store_true")
-parser.add_argument('-q', '--quiet', help='Quiet mode. Only show incorrect quotas', 
+parser.add_argument('-q', '--quiet', help='Quiet mode. Only show incorrect quotas',
                     action="store_true")
 args = parser.parse_args()
 tenant = args.tenant
@@ -164,22 +163,22 @@ cxt = context.get_admin_context()
 # if the actual usage & the quota tracking differ,
 # update quota to match reality
 try:
-  actual = get_actual_usage(cxt, tenant).values()
-  incorrect = get_incorrect_usage(cxt, tenant).values()
+    actual = get_actual_usage(cxt, tenant).values()
+    incorrect = get_incorrect_usage(cxt, tenant).values()
 except:
-  exit(2)
+    exit(2)
 
 if actual == incorrect:
     if not args.quiet:
-      print_usage(cxt, tenant)
-      print "%s quota is OK" % tenant
+        print_usage(cxt, tenant)
+        print "%s quota is OK" % tenant
     exit(0)
 else:
     print "%s usage and database differ" % tenant
     print_usage(cxt, tenant)
     if args.dryrun:
-      print "Dry Run Mode Enabled - not correcting the quota database."
-      exit(1)
+        print "Dry Run Mode Enabled - not correcting the quota database."
+        exit(1)
     else:
         print "Updating quota usage to reflect actual usage..\n"
         fix_usage(cxt, tenant)
