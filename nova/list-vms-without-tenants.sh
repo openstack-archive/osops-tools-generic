@@ -14,10 +14,13 @@ echo "done."
 echo "Getting a list of tenants from keystone...."
 keystoneraw=$( keystone tenant-list )
 echo "done."
-novatenants=$( echo "$novavmsraw" | awk '{print $6}' | sort | uniq | grep -v Tenant )
+novatenants=$( echo "$novavmsraw" | awk '{print $6}' | sort | uniq |\
+    grep -v Tenant )
 echo "Starting to list vm's that are no longer attached to a tenant..."
 echo "Fields are:"
-echo "|  VM ID                               |     VM Name                               | Tenant Id                        | User Id        |"
+echo "|  VM ID                               |  \
+VM Name                               | Tenant Id                        |  \
+User Id        |"
 for i in $novatenants; do
     tmp=$( echo "$keystoneraw" | grep $i )
     if [ $? -eq 0 ]; then

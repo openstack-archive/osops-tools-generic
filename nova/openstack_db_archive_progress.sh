@@ -19,11 +19,14 @@
 # Report on the current state of unarchived records in the main nova.* tables
 
 DATABASE=nova
-FKTABLES="block_device_mapping instance_metadata instance_system_metadata instance_actions instance_faults virtual_interfaces fixed_ips security_group_instance_association migrations instance_extra"
+FKTABLES="block_device_mapping instance_metadata instance_system_metadata \
+instance_actions instance_faults virtual_interfaces fixed_ips \
+security_group_instance_association migrations instance_extra"
 TABLES="${TABLES} ${FKTABLES}"
 
 function usage {
-    echo "$0: Report on the current state of unarchived records in the main nova.* tables"
+    echo "$0: Report on the current state of unarchived records in the\
+main nova.* tables"
     echo "Usage: $0 -d [database] -H [hostname] -u [username] -p [password]"
 }
 
@@ -51,10 +54,16 @@ done
 for TABLE in ${TABLES}; do
     SHADOW_TABLE="shadow_${TABLE}"
 
-    ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
-    DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | tail -1`
-    SHADOW_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e "select count(id) from ${DATABASE}.${SHADOW_TABLE}" | tail -1`
+    ACTIVE_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e \
+        "select count(id) from ${DATABASE}.${TABLE} where deleted=0" | tail -1`
+    DELETED_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e \
+        "select count(id) from ${DATABASE}.${TABLE} where deleted!=0" | \
+        tail -1`
+    SHADOW_RECORDS=`mysql ${HOST} ${USER} ${PASS} -B -e \
+        "select count(id) from ${DATABASE}.${SHADOW_TABLE}" | tail -1`
     TOTAL_RECORDS=`expr $ACTIVE_RECORDS + $DELETED_RECORDS + $SHADOW_RECORDS`
 
-    echo `date` "${DATABASE}.${TABLE} has ${ACTIVE_RECORDS}, ${DELETED_RECORDS} ready for archiving and ${SHADOW_RECORDS} already in ${SHADOW_TABLE}. Total records is ${TOTAL_RECORDS}"
+    echo `date` "${DATABASE}.${TABLE} has ${ACTIVE_RECORDS}," \
+        "${DELETED_RECORDS} ready for archiving and ${SHADOW_RECORDS}" \
+        "already in ${SHADOW_TABLE}. Total records is ${TOTAL_RECORDS}"
 done
