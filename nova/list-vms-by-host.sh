@@ -5,7 +5,8 @@
 #
 # Author: Mike Dorman <mdorman@godaddy.com>
 
-for i in `nova list --all-tenants | grep -v '^+-' | grep -v '^| ID' | awk '{print $2 "," $4 "," $6;}'`; do
+for i in `nova list --all-tenants | grep -v '^+-' | grep -v '^| ID' |\
+            awk '{print $2 "," $4 "," $6;}'`; do
     ID=`echo $i | cut -d, -f 1`
     NAME=`echo $i | cut -d, -f 2`
     STATUS=`echo $i | cut -d, -f 3`

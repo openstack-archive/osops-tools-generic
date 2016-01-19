@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# This script will look at the configured vm's and will check to make sure that their disk drive still exists,
-# If not then it will remove the vm from libvirt.  This fixes the nova errors about disks missing from VM's
+# This script will look at the configured vm's and will check to make sure that
+# their disk drive still exists, If not then it will remove the vm from
+# libvirt.  This fixes the nova errors about disks missing from VM's
 #
 # Author: Kris Lindgren <klindgren@godaddy.com>
 
@@ -23,7 +24,8 @@ removeorphan(){
 }
 
 for i in /etc/libvirt/qemu/*.xml; do
-    disklocation=$( grep /var/lib/nova/instances $i | grep disk | cut -d"'" -f2,2)
+    disklocation=$( grep /var/lib/nova/instances $i | grep disk | \
+                    cut -d"'" -f2,2)
     if [ ! -e $disklocation ]; then
         orphan=$(echo $i | cut -d"/" -f5,5 | cut -d"." -f1,1)
         echo "$orphan does not have a disk located at: $disklocation"
