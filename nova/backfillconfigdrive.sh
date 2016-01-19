@@ -13,7 +13,8 @@ mkdir -p blank
 mkisofs -o blank.iso blank/ >/dev/null 2>&1
 rmdir blank
 
-for i in `ls /var/lib/nova/instances | grep -E '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'`; do
+for i in `ls /var/lib/nova/instances | \
+    grep -E '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'`; do
     ls -l /var/lib/nova/instances/$i/disk.config
     if [ ! -s /var/lib/nova/instances/$i/disk.config ]; then
         echo "$i config drive doesn't exist, or is size zero."
