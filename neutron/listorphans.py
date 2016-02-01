@@ -15,6 +15,8 @@ def get_credentials():
     d['password'] = os.environ['OS_PASSWORD']
     d['auth_url'] = os.environ['OS_AUTH_URL']
     d['tenant_name'] = os.environ['OS_TENANT_NAME']
+    if 'OS_REGION_NAME' in os.environ:
+        d['region_name'] = os.environ['OS_REGION_NAME']
     return d
 
 credentials = get_credentials()

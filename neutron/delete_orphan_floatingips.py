@@ -20,6 +20,9 @@ def main():
         tenant_name = os.environ['OS_TENANT_NAME']
         password = os.environ['OS_PASSWORD']
         auth_url = os.environ['OS_AUTH_URL']
+        region_name = None
+        if 'OS_REGION_NAME' in os.environ:
+            region_name = os.environ['OS_REGION_NAME']
     except KeyError:
         print("You need to source your openstack creds file first!")
         sys.exit(1)
@@ -27,7 +30,8 @@ def main():
     neutron = client.Client(username=username,
                             tenant_name=tenant_name,
                             password=password,
-                            auth_url=auth_url)
+                            auth_url=auth_url,
+                            region_name=region_name)
 
     floatingips = neutron.list_floatingips()
     for floatingip in floatingips['floatingips']:
