@@ -1,0 +1,76 @@
+#!/usr/local/bin/ansible-playbook
+#
+# Change any neutron agent admin state on any specified host.
+#
+# This script assumes that you have an openrc file in /root/openrc
+# on the ansible host where you are running this from. It also
+# requires that the neutron client be installed.
+#
+# Author: Matt Fischer <matt@mattfischer.com>
+# Copyright 2015 Matthew Fischer
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#############################################################################
+#
+# Note: It is up to you, the user, to limit this with -l compute, -l control,
+# etc otherwise all agents will be changed.
+#
+# Examples:
+#
+# Enable all L3 Agents on all compute nodes
+#   change-neutron-agent-state.yaml -e admin_state=up -e agent_type=L3 -l compute
+#
+# Disable all L3 Agents on all control nodes
+#   change-neutron-agent-state.yaml -e admin_state=down -e agent_type=L3 -l control
+#
+# Disable all Metadata Agents on all control nodes
+#   change-neutron-agent-state.yaml -e admin_state=down -e agent_type=Metadata -l control
+#
+# NOTE: Ovs is special because the shell eats the spaces
+# Disable all OVS Agents on all compute nodes (this would probably be a bad idea to do)
+#   change-neutron-agent-state.yaml -e admin_state=down -e 'agent_type="Open vSwitch"' -l compute
+---
+- name: "change the L3 Agent state"
+  hosts: compute:control
+  serial: 30
+  gather_facts: no
+  connection: local
+  tasks:
+  - fail: msg="You need to pass either admin_state='up' or admin_state='down'"
+    name: "Ensure admin_state variable is set"
+    when: admin_state != "down" and admin_state != "up"
+
+  - fail: msg="Invalid agent_type, should be 'L3', 'Metadata', 'DHCP', or 'Open vSwitch'"
+    name: "Ensure agent_type variable is set"
+    when: agent_type != "L3" and agent_type != "Metadata" and agent_type != "DHCP" and agent_type != "Open vSwitch"
+
+  - local_action: shell . /root/openrc && neutron agent-list --format value --agent_type="{{ agent_type }} agent" --host={{ inventory_hostname }} -F id
+    name: "find agents for host"
+    failed_when: agent_id.rc != 0
+    register: agent_id
+
+  - local_action: shell . /root/openrc && neutron agent-update --admin-state-down --description "Disabled by Ansible" {{ item }}
+    name: "disable agent"
+    failed_when: result.rc != 0
+    register: result
+    with_items:
+      - "{{ agent_id.stdout_lines }}"
+    when: "admin_state=='down'"
+
+  - local_action: shell . /root/openrc && neutron agent-update --admin-state-up --description "" {{ item }}
+    name: "enable agent"
+    failed_when: result.rc != 0
+    register: result
+    with_items:
+      - "{{ agent_id.stdout_lines }}"
+    when: "admin_state=='up'"
