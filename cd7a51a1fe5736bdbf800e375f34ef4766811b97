@@ -1,0 +1,9 @@
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Code-Review+2: Simon Pasquier <spasquier@mirantis.com>
+Workflow+1: Simon Pasquier <spasquier@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 08 Feb 2016 15:07:13 +0000
+Reviewed-on: https://review.openstack.org/276856
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
