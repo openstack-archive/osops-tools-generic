@@ -16,7 +16,7 @@ for i in `nova list --all-tenants | grep -v '^+-' | grep -v '^| ID' |\
 
     SHOW=`nova show ${ID}`
     HV=`echo "${SHOW}" | grep OS-EXT-SRV-ATTR:host | awk '{print $4;}'`
-    IP=`echo "${SHOW}" | grep " network" | awk '{print $5;}'`
+    IP=`echo "${SHOW}" | grep " network" | sed -e "s/.*network *| //" -e "s/ *| *$//"`
 
     echo -e "${HV}\t${ID}\t${STATUS}\t${IP}\t${NAME}"
 done
