@@ -101,14 +101,14 @@ echo `date` "Purging nova.instance_actions_events of deleted instance data"
 
 TABLE=instance_actions_events
 SHADOW_TABLE="shadow_${TABLE}"
-pt-archiver ${DRY_RUN} ${NOSAI} --statistics --sleep-coef 0.75 --progress 100 \
-    --commit-each --limit 10 \
+pt-archiver ${DRY_RUN} ${NOSAI} --statistics --sleep-coef 0.75 \
+    --progress 100 --commit-each --limit 10 \
     --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
     --no-check-charset  \
     --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
-    --where 'EXISTS(SELECT * FROM instance_actions, instances WHERE \
-    instance_actions.id=instance_actions_events.action_id AND \
-    instance_actions.instance_uuid=instances.uuid AND instances.deleted!=0)'
+    --where 'EXISTS(SELECT * FROM instance_actions, instances WHERE '\
+'instance_actions.id=instance_actions_events.action_id AND '\
+'instance_actions.instance_uuid=instances.uuid AND instances.deleted!=0)'
 
 for TABLE in ${FKTABLES}; do
     echo `date` "Purging nova.${TABLE} of deleted instance data"
@@ -126,8 +126,8 @@ for TABLE in ${FKTABLES}; do
         --source D=${DATABASE},t=${TABLE}${HOSTPT}${USERPT}${PASSPT} \
         --no-check-charset  \
         --dest D=${DATABASE},t=${SHADOW_TABLE}${HOSTPT}${USERPT}${PASSPT} \
-        --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 AND \
-            uuid='${TABLE}'.instance_uuid)'
+        --where 'EXISTS(SELECT * FROM instances WHERE deleted!=0 '\
+'AND uuid='${TABLE}'.instance_uuid)'
 done
 
 for TABLE in ${TABLES}; do
