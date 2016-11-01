@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """
  Author: amos.steven.davis@hp.com
- Description: Fix nova quota in the nova database when the acutal usage
+ Description: Fix nova quota in the nova database when the actual usage
  and what nova thinks is the quota do not match.
 """
 from nova import db
