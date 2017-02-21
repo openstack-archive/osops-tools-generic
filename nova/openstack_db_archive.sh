@@ -27,7 +27,7 @@ unset DRY_RUN
 # tables to arhive deleted records from
 DATABASE=nova
 TABLES="security_group_rules security_group_instance_association \
-security_groups instance_info_caches instances reservations compute_node_stats"
+security_groups instance_info_caches instances reservations"
 FKTABLES="block_device_mapping instance_metadata instance_system_metadata \
 instance_actions instance_faults virtual_interfaces fixed_ips \
 security_group_instance_association migrations instance_extra"
