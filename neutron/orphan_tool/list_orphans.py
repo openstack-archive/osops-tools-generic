@@ -36,7 +36,7 @@ def get_orphaned_neutron_objects(neutron_obj):
     orphans = []
     for neutron_obj in neutron_objs.get(neutron_obj):
         if neutron_obj['tenant_id'] not in tenantids:
-            orphans.append(object['id'])
+            orphans.append(neutron_obj['id'])
     return orphans
 
 
