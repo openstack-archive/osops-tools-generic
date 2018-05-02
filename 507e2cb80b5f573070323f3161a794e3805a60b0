@@ -1,0 +1,11 @@
+Code-Review+1: Robert Putt <robert.putt@rackspace.co.uk>
+Code-Review+1: Nick Jones <nick@stackhpc.com>
+Workflow+1: Melvin Hillsman (mrhillsman) <mrhillsman@gmail.com>
+Code-Review+1: Pierre Riteau <priteau@uchicago.edu>
+Code-Review+2: Melvin Hillsman (mrhillsman) <mrhillsman@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 02 May 2018 20:06:31 +0000
+Reviewed-on: https://review.openstack.org/536992
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
