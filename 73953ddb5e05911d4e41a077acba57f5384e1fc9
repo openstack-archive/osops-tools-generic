@@ -1,0 +1,9 @@
+Code-Review+1: Andriy Shevchenko <huang.zhiping@99cloud.net>
+Workflow+1: Melvin Hillsman <mrhillsman@gmail.com>
+Code-Review+2: Melvin Hillsman <mrhillsman@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 13 Nov 2018 23:56:07 +0000
+Reviewed-on: https://review.openstack.org/615050
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
