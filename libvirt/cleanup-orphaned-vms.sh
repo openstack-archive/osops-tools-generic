@@ -17,19 +17,19 @@ if [ -z "$UUIDS" ]; then
     exit 1
 fi
 
-for i in `virsh list --all | grep -E '^ [0-9-]+' | awk '{print $2;}'` ; do
+for uuid in `virsh list --uuid --all` ; do
 
-    virsh dumpxml $i | grep "source file" | grep -E "$UUIDS" >/dev/null
+    echo $uuid | grep -E "$UUIDS" >/dev/null
     if [ $? -ne 0 ]; then
-        echo -n "+ $i is NOT known to OpenStack, removing managedsave info... "
-        [ -z "$1" ] && virsh managedsave-remove $i 1>/dev/null 2>&1
+        echo -n "+ $uuid is NOT known to OpenStack, removing managedsave info... "
+        [ -z "$1" ] && virsh managedsave-remove $uuid 1>/dev/null 2>&1
         echo -n "destroying VM... "
-        [ -z "$1" ] && virsh destroy $i 1>/dev/null 2>&1
+        [ -z "$1" ] && virsh destroy $uuid 1>/dev/null 2>&1
         echo -n "undefining VM... "
-        [ -z "$1" ] && virsh undefine $i 1>/dev/null 2>&1
+        [ -z "$1" ] && virsh undefine $uuid 1>/dev/null 2>&1
         echo DONE
     else
-        echo "* $i is known to OpenStack, not removing."
+        echo "* $uuid is known to OpenStack, not removing."
     fi
 
 done
