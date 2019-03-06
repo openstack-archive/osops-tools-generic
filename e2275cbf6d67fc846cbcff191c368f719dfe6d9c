@@ -1,0 +1,9 @@
+Code-Review+2: Sean McGinnis <sean.mcginnis@gmail.com>
+Code-Review+2: Amy Marrich (spotz) <amy@demarco.com>
+Workflow+1: Amy Marrich (spotz) <amy@demarco.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 06 Mar 2019 16:24:21 +0000
+Reviewed-on: https://review.openstack.org/633187
+Project: openstack/osops-tools-generic
+Branch: refs/heads/master
