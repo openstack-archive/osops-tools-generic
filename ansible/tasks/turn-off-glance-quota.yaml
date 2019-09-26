@@ -1,4 +1,0 @@
-  - name: Removing user_storage_quota setting from glance-api.conf
-    shell: "sed -r -i 's/^[[:space:]]*user_storage_quota/#user_storage_quota/g' /etc/glance/glance-api.conf"
-  - service: name=openstack-glance-api state=restarted
-

@@ -1,3 +1,0 @@
-  - name: Running puppet deployment script
-    shell: "tools/remove-deleted-orphans.sh"
-
